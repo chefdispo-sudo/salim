@@ -14,7 +14,7 @@ export const generateCourse = async (data: FormData): Promise<Course> => {
   const apiKey = process.env.API_KEY;
   
   if (!apiKey) {
-    throw new Error("La API KEY no está configurada en las variables de entorno de Vercel.");
+    throw new Error("API_KEY no configurada. Asegúrate de añadirla en las variables de entorno de tu plataforma de despliegue.");
   }
 
   const ai = new GoogleGenAI({ apiKey });
@@ -26,56 +26,49 @@ export const generateCourse = async (data: FormData): Promise<Course> => {
     Tu misión es crear un curso estructurado basado en los parámetros del usuario.
     
     REGLAS CRÍTICAS:
-    1. El tono debe ser didáctico, cercano, motivador y profesional. No menciones que eres una IA.
-    2. Utiliza frases cortas y claras. Evita párrafos densos.
-    3. Para temas complejos, usa analogías intuitivas.
-    4. El curso debe tener entre 6 y 8 unidades. Cada unidad entre 3 y 5 lecciones.
-    5. Cada lección DEBE tener: Idea clave, Ejemplo real/aplicado, Actividad práctica y un Test rápido de 3 preguntas.
-    6. Incluye una Evaluación Final (8-10 preguntas) y 2 propuestas de proyecto.
-    7. DEBES usar la herramienta Google Search para encontrar fuentes reales y actualizadas.
-    8. El idioma del contenido generado DEBE ser estrictamente: ${targetLang}.
+    1. El tono debe ser didáctico, cercano, motivador y profesional.
+    2. El curso debe tener entre 6 y 8 unidades. Cada unidad entre 3 y 5 lecciones.
+    3. Cada lección DEBE tener: Idea clave, Ejemplo real, Actividad práctica y un Test de 3 preguntas.
+    4. Usa la herramienta Google Search para fuentes actualizadas.
+    5. Idioma: ${targetLang}.
   `;
 
   const prompt = `
     Diseña un curso completo con estos parámetros:
     - Tema: ${data.topic}
-    - Nivel del alumno: ${data.level}
-    - Perfil del alumno: ${data.profile}
+    - Nivel: ${data.level}
+    - Perfil: ${data.profile}
     - Objetivo: ${data.objective}
-    - Tiempo disponible: ${data.time}
-    - Formato: ${data.format}
     
-    Devuelve la respuesta estrictamente en formato JSON siguiendo este esquema:
+    Devuelve estrictamente un JSON con este esquema:
     {
-      "title": "Título del curso",
-      "description": "Descripción corta",
+      "title": "Título",
+      "description": "Descripción",
       "level": "Nivel",
       "duration": "Duración",
       "profile": "Perfil",
-      "objectives": ["objetivo 1", "objetivo 2"],
+      "objectives": ["obj1", "obj2"],
       "units": [
         {
-          "title": "Título de Unidad",
+          "title": "Unidad",
           "summary": "Resumen",
           "lessons": [
             {
               "id": "1.1",
-              "title": "Título de lección",
+              "title": "Lección",
               "content": {
-                "keyIdea": "Explicación",
-                "example": "Ejemplo real",
-                "activity": "Actividad",
-                "quiz": [
-                  { "text": "Pregunta", "options": ["A", "B", "C", "D"], "correctAnswer": "A" }
-                ]
+                "keyIdea": "Teoría",
+                "example": "Ejemplo",
+                "activity": "Práctica",
+                "quiz": [{ "text": "Pregunta", "options": ["A", "B", "C", "D"], "correctAnswer": "A" }]
               }
             }
           ]
         }
       ],
-      "finalEvaluation": [ { "text": "Pregunta", "options": ["A", "B", "C", "D"], "correctAnswer": "C" } ],
-      "finalProjects": ["Proyecto A", "Proyecto B"],
-      "sources": [ { "title": "Nombre de fuente", "url": "url_real" } ]
+      "finalEvaluation": [{ "text": "Pregunta", "options": ["A", "B", "C", "D"], "correctAnswer": "C" }],
+      "finalProjects": ["Proyecto 1"],
+      "sources": [{ "title": "Fuente", "url": "URL" }]
     }
   `;
 
@@ -91,18 +84,16 @@ export const generateCourse = async (data: FormData): Promise<Course> => {
     });
 
     const text = result.text || "";
-    // Aseguramos que solo extraemos el contenido entre llaves por si el modelo añade texto extra
+    // Limpieza de seguridad por si la IA devuelve markdown
     const startIdx = text.indexOf('{');
     const endIdx = text.lastIndexOf('}');
     
-    if (startIdx === -1 || endIdx === -1) {
-      throw new Error("Respuesta de IA malformada");
-    }
-
+    if (startIdx === -1) throw new Error("Formato JSON no encontrado");
+    
     const cleanedJson = text.substring(startIdx, endIdx + 1);
     return JSON.parse(cleanedJson) as Course;
   } catch (error) {
-    console.error("Error generating course:", error);
-    throw new Error("No pudimos generar el aula virtual. Verifica tu API Key o intenta de nuevo.");
+    console.error("Gemini Error:", error);
+    throw new Error("Error al generar el aula virtual. Revisa la consola para más detalles.");
   }
 };
