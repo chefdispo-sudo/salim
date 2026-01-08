@@ -11,8 +11,13 @@ const getLanguageName = (code: string) => {
 };
 
 export const generateCourse = async (data: FormData): Promise<Course> => {
-  // Inicializamos el cliente. process.env.API_KEY será inyectado por Vite durante el build.
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || "" });
+  const apiKey = process.env.API_KEY;
+  
+  if (!apiKey) {
+    throw new Error("La API KEY no está configurada en las variables de entorno de Vercel.");
+  }
+
+  const ai = new GoogleGenAI({ apiKey });
   const model = "gemini-3-flash-preview";
   const targetLang = getLanguageName(data.language);
   
@@ -75,7 +80,7 @@ export const generateCourse = async (data: FormData): Promise<Course> => {
   `;
 
   try {
-    const response = await ai.models.generateContent({
+    const result = await ai.models.generateContent({
       model: model,
       contents: prompt,
       config: {
@@ -85,21 +90,19 @@ export const generateCourse = async (data: FormData): Promise<Course> => {
       },
     });
 
-    const text = response.text || "";
-    // Limpiamos posibles decoradores de markdown si la IA los incluye por error
-    // En modo responseMimeType: "application/json", Gemini suele devolver solo el JSON, 
-    // pero esta limpieza previene errores si hay bloques de código.
-    const jsonStart = text.indexOf('{');
-    const jsonEnd = text.lastIndexOf('}');
+    const text = result.text || "";
+    // Aseguramos que solo extraemos el contenido entre llaves por si el modelo añade texto extra
+    const startIdx = text.indexOf('{');
+    const endIdx = text.lastIndexOf('}');
     
-    if (jsonStart === -1 || jsonEnd === -1) {
-      throw new Error("La IA no devolvió un formato JSON válido.");
+    if (startIdx === -1 || endIdx === -1) {
+      throw new Error("Respuesta de IA malformada");
     }
 
-    const cleanedJson = text.substring(jsonStart, jsonEnd + 1);
+    const cleanedJson = text.substring(startIdx, endIdx + 1);
     return JSON.parse(cleanedJson) as Course;
   } catch (error) {
     console.error("Error generating course:", error);
-    throw new Error("Ocurrió un error al generar el curso. Por favor, verifica tu conexión o API Key.");
+    throw new Error("No pudimos generar el aula virtual. Verifica tu API Key o intenta de nuevo.");
   }
 };
