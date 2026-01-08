@@ -11,7 +11,7 @@ const getLanguageName = (code: string) => {
 };
 
 export const generateCourse = async (data: FormData): Promise<Course> => {
-  // Inicializamos el cliente dentro de la función para asegurar que process.env.API_KEY esté disponible
+  // Inicializamos el cliente. process.env.API_KEY será inyectado por Vite durante el build.
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || "" });
   const model = "gemini-3-flash-preview";
   const targetLang = getLanguageName(data.language);
@@ -86,10 +86,20 @@ export const generateCourse = async (data: FormData): Promise<Course> => {
     });
 
     const text = response.text || "";
-    const cleanedJson = text.replace(/```json/g, "").replace(/```/g, "").trim();
+    // Limpiamos posibles decoradores de markdown si la IA los incluye por error
+    // En modo responseMimeType: "application/json", Gemini suele devolver solo el JSON, 
+    // pero esta limpieza previene errores si hay bloques de código.
+    const jsonStart = text.indexOf('{');
+    const jsonEnd = text.lastIndexOf('}');
+    
+    if (jsonStart === -1 || jsonEnd === -1) {
+      throw new Error("La IA no devolvió un formato JSON válido.");
+    }
+
+    const cleanedJson = text.substring(jsonStart, jsonEnd + 1);
     return JSON.parse(cleanedJson) as Course;
   } catch (error) {
     console.error("Error generating course:", error);
-    throw new Error("Ocurrió un error al generar el curso.");
+    throw new Error("Ocurrió un error al generar el curso. Por favor, verifica tu conexión o API Key.");
   }
 };
