@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Course, FormData, Language, UserProfile } from './types';
 import { generateCourse } from './geminiService';
+import { syncUserToDatabase } from './dbService';
 import HomeView from './components/HomeView';
 import CourseView from './components/CourseView';
 import LoadingView from './components/LoadingView';
@@ -82,6 +83,8 @@ const App: React.FC = () => {
   const updateProfile = (newProfile: UserProfile) => {
     setProfile(newProfile);
     localStorage.setItem('user_profile', JSON.stringify(newProfile));
+    // Sincronizar con Google Sheets
+    syncUserToDatabase(newProfile, language);
   };
 
   return (
