@@ -1,8 +1,6 @@
 
-import { GoogleGenAI, Type } from "@google/genai";
+import { GoogleGenAI } from "@google/genai";
 import { Course, FormData } from "./types";
-
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || "" });
 
 const getLanguageName = (code: string) => {
   switch (code) {
@@ -13,6 +11,8 @@ const getLanguageName = (code: string) => {
 };
 
 export const generateCourse = async (data: FormData): Promise<Course> => {
+  // Inicializamos el cliente dentro de la función para asegurar que process.env.API_KEY esté disponible
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || "" });
   const model = "gemini-3-flash-preview";
   const targetLang = getLanguageName(data.language);
   
@@ -27,7 +27,7 @@ export const generateCourse = async (data: FormData): Promise<Course> => {
     4. El curso debe tener entre 6 y 8 unidades. Cada unidad entre 3 y 5 lecciones.
     5. Cada lección DEBE tener: Idea clave, Ejemplo real/aplicado, Actividad práctica y un Test rápido de 3 preguntas.
     6. Incluye una Evaluación Final (8-10 preguntas) y 2 propuestas de proyecto.
-    7. DEBES usar la herramienta Google Search para encontrar fuentes reales y actualizadas (libros, artículos, webs).
+    7. DEBES usar la herramienta Google Search para encontrar fuentes reales y actualizadas.
     8. El idioma del contenido generado DEBE ser estrictamente: ${targetLang}.
   `;
 
@@ -40,7 +40,7 @@ export const generateCourse = async (data: FormData): Promise<Course> => {
     - Tiempo disponible: ${data.time}
     - Formato: ${data.format}
     
-    Devuelve la respuesta estrictamente en formato JSON siguiendo este esquema (las claves deben ser exactas, pero los valores en ${targetLang}):
+    Devuelve la respuesta estrictamente en formato JSON siguiendo este esquema:
     {
       "title": "Título del curso",
       "description": "Descripción corta",
